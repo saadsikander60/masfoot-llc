@@ -75,7 +75,7 @@ export const addTrip = async (req, res) => {
 export const getTrips = async (req, res) => {
   try {
     const { carId } = req.params;
-    const { invoice } = req.query;
+    const { invoice, month } = req.query; // 👈 month add
 
     let filter = {};
 
@@ -84,11 +84,23 @@ export const getTrips = async (req, res) => {
       filter.carId = carId;
     }
 
-    // 🔍 invoice search (single ya multiple)
+    // 🔍 invoice search
     if (invoice) {
       filter.invoice = {
         $regex: invoice,
         $options: "i",
+      };
+    }
+
+    // 📅 month filter
+    if (month) {
+      const start = new Date(`${month}-01`);
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + 1);
+
+      filter.date = {
+        $gte: start,
+        $lt: end,
       };
     }
 
