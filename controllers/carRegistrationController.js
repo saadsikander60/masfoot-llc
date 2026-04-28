@@ -108,3 +108,63 @@ if (carNumber) {
     });
   }
 };
+
+
+export const updateCar = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const {
+      carName,
+      carNumber,
+      carColor,
+      ownerName,
+      registrationDate,
+      notes,
+    } = req.body;
+
+    // 🔍 Check car exists
+    const car = await Car.findById(id);
+    if (!car) {
+      return res.status(404).json({
+        success: false,
+        message: "Car not found",
+      });
+    }
+
+    // 🔁 Duplicate carNumber check (agar change ho)
+    if (carNumber && carNumber !== car.carNumber) {
+      const existingCar = await Car.findOne({ carNumber });
+      if (existingCar) {
+        return res.status(400).json({
+          success: false,
+          message: "Car with this number already exists",
+        });
+      }
+      car.carNumber = carNumber;
+    }
+
+    // 📝 Partial update (sirf jo field aaye)
+    if (carName) car.carName = carName;
+    if (carColor) car.carColor = carColor;
+    if (ownerName) car.ownerName = ownerName;
+    if (registrationDate) car.registrationDate = registrationDate;
+    if (notes !== undefined) car.notes = notes;
+
+    await car.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Car updated successfully",
+      car,
+    });
+
+  } catch (error) {
+    console.log("UPDATE CAR ERROR:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Server error",
+    });
+  }
+};
