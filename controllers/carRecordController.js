@@ -94,7 +94,7 @@ export const getTrips = async (req, res) => {
 
     // 📅 month filter
     if (month) {
-      const start = new Date(`${month}-01`);
+      const start = new Date(new Date().getFullYear(), parseInt(month) - 1, 1);
       const end = new Date(start);
       end.setMonth(end.getMonth() + 1);
 
