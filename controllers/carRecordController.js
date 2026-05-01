@@ -1,6 +1,7 @@
 import Trip from "../models/tripRecordModel.js";
 import Car from "../models/carRegistrationModel.js";
 
+
 // ➕ Add Trip Record
 export const addTrip = async (req, res) => {
   try {
@@ -75,7 +76,7 @@ export const addTrip = async (req, res) => {
 export const getTrips = async (req, res) => {
   try {
     const { carId } = req.params;
-    const { invoice, month } = req.query; // 👈 month add
+    const { invoice, month, year } = req.query;
 
     let filter = {};
 
@@ -85,16 +86,27 @@ export const getTrips = async (req, res) => {
     }
 
     // 🔍 invoice search
-    if (invoice) {
+    if (invoice && invoice.trim() !== "") {
       filter.invoice = {
         $regex: invoice,
         $options: "i",
       };
     }
 
-    // 📅 month filter
+    // 📅 month + year filter (FIXED)
     if (month) {
-      const start = new Date(new Date().getFullYear(), parseInt(month) - 1, 1);
+      const selectedMonth = parseInt(month);
+      const selectedYear = year ? parseInt(year) : new Date().getFullYear();
+
+      // ❌ invalid month check
+      if (selectedMonth < 1 || selectedMonth > 12) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid month",
+        });
+      }
+
+      const start = new Date(selectedYear, selectedMonth - 1, 1);
       const end = new Date(start);
       end.setMonth(end.getMonth() + 1);
 
@@ -121,7 +133,6 @@ export const getTrips = async (req, res) => {
     });
   }
 };
-
 
 export const updateTrip = async (req, res) => {
   try {
@@ -224,6 +235,61 @@ export const deleteTrip = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Server error",
+    });
+  }
+};
+
+export const getLogsSummary = async (req, res) => {
+  try {
+    const { carId } = req.params;
+    const { month, year } = req.query;
+
+    if (!month) {
+      return res.status(400).json({
+        success: false,
+        message: "Month required",
+      });
+    }
+
+    const selectedMonth = parseInt(month);
+    const selectedYear = year ? parseInt(year) : new Date().getFullYear();
+
+    const start = new Date(selectedYear, selectedMonth - 1, 1);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 1);
+
+    const trips = await Trip.find({
+      carId,
+      date: {
+        $gte: start,
+        $lt: end,
+      },
+    });
+
+    // 🔥 totals calculate
+    let totalAmount = 0;
+    let totalExpense = 0;
+    let totalProfit = 0;
+
+    trips.forEach((trip) => {
+      totalAmount += trip.amount || 0;
+      totalExpense += trip.expense || 0;
+      totalProfit += trip.profit || 0;
+    });
+
+    res.status(200).json({
+      success: true,
+      totalAmount,
+      totalExpense,
+      totalProfit,
+    });
+
+  } catch (error) {
+    console.log("LOGS ERROR:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Server error",
     });
   }
 };
